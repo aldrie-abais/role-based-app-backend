@@ -13,16 +13,17 @@ function handleRouting() {
     }
 
     if (currentHash === '#/logout') {
-        // 1. Clear auth_token from localStorage
-        localStorage.removeItem('auth_token');
+        // 1. Clear the JWT token from sessionStorage
+        sessionStorage.removeItem('authToken');
         
         // 2. Call setAuthState(false)
         setAuthState(false);
         
         // 3. Navigate to home
+        showToast('Successfully logged out.', 'info');
         navigateTo('#/');
         
-        return; // Exit the function early so it doesn't try to find a "logout-page"
+        return; 
     }
 
     // 2. Hide all page elements
@@ -259,33 +260,70 @@ document.getElementById('go-to-login-btn').addEventListener('click', function() 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Phase 3C: Login System
-document.getElementById('login-submit-btn').addEventListener('click', function() {
+// Phase 3C: Login System (CONNECTED TO BACKEND)
+document.getElementById('login-submit-btn').addEventListener('click', async function() {
     // 1. Get the form values
     const email = document.getElementById('login-email').value.trim();
-    const password = document.getElementById('login-password').value;
+    const password = document.getElementById('login-password').value.trim();
 
-    // Temporary fetch from localStorage (Full persistence is built in Phase 4)
-    const storedDB = JSON.parse(localStorage.getItem('ipt_demo_v1'));
-    const accounts = storedDB ? storedDB.accounts : (window.db ? window.db.accounts : []);
+    try {
+        // 2. Send the data to your Node.js backend
+        // Note: Our backend expects 'username', so we send the email as the username
+        const response = await fetch('http://localhost:3000/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: email, password: password })
+        });
 
-    // 2. Find account with matching email, password, and verified: true
-    const account = accounts.find(acc => acc.email === email && acc.password === password && acc.verified === true);
+        const data = await response.json();
 
-    if (account) {
-        // 3. Save auth_token in localStorage
-        localStorage.setItem('auth_token', email);
-        
-        // 4. Update the UI state
-        setAuthState(true, account);
-        
-        // 5. Navigate to profile
-        navigateTo('#/profile');
-    } else {
-        // 6. Else: show error
-        showToast('Invalid email, password, or account is not verified.', 'danger');
+        if (response.ok) {
+            // 3. Save the real JWT token in sessionStorage
+            sessionStorage.setItem('authToken', data.token);
+            
+            // 4. Update the UI state using your existing function
+            setAuthState(true, data.user);
+            
+            // 5. Navigate to profile
+            showToast('Login successful!', 'success');
+            navigateTo('#/profile');
+        } else {
+            // Backend returned an error (e.g., wrong password)
+            showToast('Login failed: ' + data.error, 'danger');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('Network error: Is the backend server running?', 'danger');
     }
 });
+
+// Helper function to get the token for secure requests
+function getAuthHeader() {
+    const token = sessionStorage.getItem('authToken');
+    return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
+// Example: Fetch secure admin data from the backend
+async function loadAdminDashboard() {
+    try {
+        const res = await fetch('http://localhost:3000/api/admin/dashboard', {
+            method: 'GET',
+            headers: getAuthHeader() // <--- Showing our ID badge!
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            showToast('Success! ' + data.message, 'success');
+            console.log('Secret Admin Data:', data.data);
+        } else {
+            // If we are just a 'user' or not logged in, this will run
+            showToast('Access denied! ' + data.error, 'danger');
+        }
+    } catch (err) {
+        console.error('Fetch error:', err);
+    }
+}
 
 // Hook up the Cancel button to return home
 document.getElementById('login-cancel-btn').addEventListener('click', function() {
@@ -648,3 +686,69 @@ if (type === 'info') toastEl.classList.add('bg-info', 'text-dark');
 const toast = new bootstrap.Toast(toastEl);
 toast.show();
 }
+
+// Part 3, Step 3: Check Auth on Page Load
+async function checkAuthOnLoad() {
+    const token = sessionStorage.getItem('authToken'); // Check if a token exists
+    
+    if (token) {
+        try {
+            // Ask the backend to decode the token and tell us who is logged in
+            const res = await fetch('http://localhost:3000/api/profile', {
+                method: 'GET',
+                headers: getAuthHeader()
+            });
+            
+            const data = await res.json();
+
+            if (res.ok) {
+                // Token is valid! Restore the user's UI state
+                setAuthState(true, data.user);
+            } else {
+                // Token is expired or invalid, clear it out
+                sessionStorage.removeItem('authToken');
+                setAuthState(false);
+            }
+        } catch (err) {
+            console.error('Auth check failed:', err);
+        }
+    } else {
+        // No token found, ensure user is logged out
+        setAuthState(false);
+    }
+}
+
+// Run this immediately when the script loads
+checkAuthOnLoad();// Part 3, Step 3: Check Auth on Page Load
+async function checkAuthOnLoad() {
+    const token = sessionStorage.getItem('authToken'); // Check if a token exists
+    
+    if (token) {
+        try {
+            // Ask the backend to decode the token and tell us who is logged in
+            const res = await fetch('http://localhost:3000/api/profile', {
+                method: 'GET',
+                headers: getAuthHeader()
+            });
+            
+            const data = await res.json();
+
+            if (res.ok) {
+                // Token is valid! Restore the user's UI state
+                setAuthState(true, data.user);
+            } else {
+                // Token is expired or invalid, clear it out
+                sessionStorage.removeItem('authToken');
+                setAuthState(false);
+            }
+        } catch (err) {
+            console.error('Auth check failed:', err);
+        }
+    } else {
+        // No token found, ensure user is logged out
+        setAuthState(false);
+    }
+}
+
+// Run this immediately when the script loads
+checkAuthOnLoad();
