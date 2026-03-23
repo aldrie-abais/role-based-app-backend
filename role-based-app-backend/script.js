@@ -178,48 +178,46 @@ loadFromStorage();
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-document.getElementById('reg-submit-btn').addEventListener('click', function() {
-    // Get the values from the form
+// Phase 3A: Registration (CONNECTED TO BACKEND)
+document.getElementById('reg-submit-btn').addEventListener('click', async function() {
     const firstName = document.getElementById('reg-firstname').value.trim();
     const lastName = document.getElementById('reg-lastname').value.trim();
     const email = document.getElementById('reg-email').value.trim();
     const password = document.getElementById('reg-password').value;
 
-    // Check password length requirement
-    if (password.length < 6) {
-        showToast('Password must be at least 6 characters.', 'danger');
-        return;
+    if (password.length < 6) return showToast('Password must be at least 6 characters.', 'danger');
+    if (!firstName || !lastName || !email) return showToast('Please fill in all fields.', 'danger');
+
+    try {
+        // Send registration to the Node.js backend
+        const response = await fetch('http://localhost:3000/api/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                username: email, // Backend expects 'username'
+                password: password,
+                role: 'user' // Default role
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            showToast('Registration successful! You may now log in.', 'success');
+            navigateTo('#/login');
+            
+            // Clear the form
+            document.getElementById('reg-firstname').value = '';
+            document.getElementById('reg-lastname').value = '';
+            document.getElementById('reg-email').value = '';
+            document.getElementById('reg-password').value = '';
+        } else {
+            showToast('Registration failed: ' + data.error, 'danger');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('Network error: Cannot reach the backend.', 'danger');
     }
-
-    if (!firstName || !lastName || !email) {
-        showToast('Please fill in all fields.', 'danger');
-        return;
-    }
-
-    // Check if email already exists
-    const emailExists = window.db.accounts.find(acc => acc.email === email);
-    if (emailExists) {
-        showToast('This email is already registered.', 'danger');
-        return;
-    }
-
-    // Save new account with verified: false
-    const newAccount = {
-        firstName: firstName,
-        lastName: lastName,
-        email: email,
-        password: password,
-        role: 'User', // Default role
-        verified: false
-    };
-    
-    window.db.accounts.push(newAccount);
-
-    // Store unverified email in localStorage
-    localStorage.setItem('unverified_email', email);
-
-    // Navigate to verification page
-    navigateTo('#/verify-email');
 });
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -268,7 +266,6 @@ document.getElementById('login-submit-btn').addEventListener('click', async func
 
     try {
         // 2. Send the data to your Node.js backend
-        // Note: Our backend expects 'username', so we send the email as the username
         const response = await fetch('http://localhost:3000/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
