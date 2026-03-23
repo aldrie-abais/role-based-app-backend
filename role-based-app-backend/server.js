@@ -7,9 +7,9 @@ const app = express();
 const PORT = 3000;
 const SECRET_KEY = 'your-very-secure-secret'; // In production, use environment variables!
 
-// 1. Enable CORS for frontend (Allows your HTML file to talk to this server)
+// 1. Enable CORS for frontend
 app.use(cors({
-    origin: ['http://127.0.0.1:5500', 'http://localhost:5500'] // Change 5500 if your Live Server uses a different port!
+    origin: ['http://127.0.0.1:5500', 'http://localhost:5500']
 }));
 
 app.use(express.json());
