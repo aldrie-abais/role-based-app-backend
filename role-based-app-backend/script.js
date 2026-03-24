@@ -716,14 +716,14 @@ async function checkAuthOnLoad() {
     }
 }
 
-// Run this immediately when the script loads
-checkAuthOnLoad();// Part 3, Step 3: Check Auth on Page Load
+checkAuthOnLoad();
+
+// Part 3, Step 3: Check Auth on Page Load
 async function checkAuthOnLoad() {
-    const token = sessionStorage.getItem('authToken'); // Check if a token exists
+    const token = sessionStorage.getItem('authToken'); 
     
     if (token) {
         try {
-            // Ask the backend to decode the token and tell us who is logged in
             const res = await fetch('http://localhost:3000/api/profile', {
                 method: 'GET',
                 headers: getAuthHeader()
@@ -732,19 +732,21 @@ async function checkAuthOnLoad() {
             const data = await res.json();
 
             if (res.ok) {
-                // Token is valid! Restore the user's UI state
                 setAuthState(true, data.user);
             } else {
-                // Token is expired or invalid, clear it out
                 sessionStorage.removeItem('authToken');
                 setAuthState(false);
+                navigateTo('#/'); // NEW: Kick them back to home if token is invalid
             }
         } catch (err) {
             console.error('Auth check failed:', err);
         }
     } else {
-        // No token found, ensure user is logged out
         setAuthState(false);
+        // NEW: If they are trying to view a protected page without a token, kick them to home
+        if (window.location.hash !== '#/' && window.location.hash !== '#/login' && window.location.hash !== '#/register') {
+            navigateTo('#/'); 
+        }
     }
 }
 
