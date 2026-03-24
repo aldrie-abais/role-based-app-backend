@@ -96,7 +96,6 @@ handleRouting();
 
 // This acts as your boolean toggle
 function setAuthState(isAuth, user) {
-
     currentUser = isAuth ? user : null;
 
     if (isAuth) {
@@ -104,12 +103,13 @@ function setAuthState(isAuth, user) {
         document.body.classList.remove('not-authenticated');
         document.body.classList.add('authenticated');
         
-        // If they are an admin, show admin links
-        if (user && user.role === 'Admin') {
+        // FIX: Use .toLowerCase() to match the backend's 'admin' role exactly
+        if (user && user.role.toLowerCase() === 'admin') {
             document.body.classList.add('is-admin');
         }
         
-        document.getElementById('navbar-user-name').textContent = user.firstName + ' ' + user.lastName;
+        // FIX: The backend only sends 'username', so we use that instead of firstName/lastName
+        document.getElementById('navbar-user-name').textContent = user.username;
     } else {
         // User is logged out
         document.body.classList.remove('authenticated');
@@ -332,9 +332,10 @@ function renderProfile() {
     // Safety check to ensure someone is actually logged in
     if (!currentUser) return; 
 
-    // Update the DOM with the current user's details
-    document.getElementById('profile-name').textContent = currentUser.firstName + ' ' + currentUser.lastName;
-    document.getElementById('profile-email').textContent = currentUser.email;
+    // FIX: Update the DOM with the new backend properties (username and role)
+    document.getElementById('profile-name').textContent = currentUser.username;
+    // Since our simple backend doesn't have emails yet, we'll just display the username here too
+    document.getElementById('profile-email').textContent = currentUser.username; 
     document.getElementById('profile-role').textContent = currentUser.role;
 }
 
