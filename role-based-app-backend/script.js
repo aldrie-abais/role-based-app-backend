@@ -36,6 +36,21 @@ function handleRouting() {
     // Convert the hash (e.g., '#/login') to match your section IDs ('login-page')
     let targetId = currentHash === '#/' ? 'home-page' : currentHash.replace('#/', '') + '-page';
     
+    // ==========================================
+    // NEW: FRONTEND SECURITY GUARD
+    // ==========================================
+    const adminOnlyPages = ['accounts-page', 'departments-page', 'employees-page'];
+    
+    // If they are trying to access an admin page...
+    if (adminOnlyPages.includes(targetId)) {
+        // Check if they are NOT logged in OR if they are NOT an admin
+        if (!currentUser || currentUser.role.toLowerCase() !== 'admin') {
+            showToast('Access Denied: Admin privileges required.', 'danger');
+            navigateTo('#/profile'); // Kick them to their profile instead
+            return; // Immediately stop loading the page
+        }
+    }
+    // ==========================================    
     const targetSection = document.getElementById(targetId);
     if (targetSection) {
         targetSection.classList.add('active');
